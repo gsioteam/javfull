@@ -96,10 +96,95 @@ class QuickVideoCollection extends Collection {
     }
 }
 
+class JavclCollection extends Collection {
+
+    request(url, ops) {
+        let headers, body;
+        if (ops) {
+            headers = ops.headers;
+            body = ops.body;
+        }
+        return new Promise((resolve, reject)=>{
+            console.log('url : ' + url);
+            let req = glib.Request.new('POST', url);
+            if (headers) {
+                for (let key in headers) {
+                    req.setHeader(key, headers[key]);
+                }
+            }
+            this.callback = glib.Callback.fromFunction(function() {
+                if (req.getError()) {
+                    reject(glib.Error.new(302, "Request error " + req.getError()));
+                } else {
+                    let body = req.getResponseBody();
+                    if (body) {
+                        resolve(body.text());
+                    } else {
+                        reject(glib.Error.new(301, "Response null body"));
+                    }
+                }
+            });
+            req.setBody(glib.Data.fromString(body));
+            req.setOnComplete(this.callback);
+            req.start();
+        });
+    }
+
+	async fetch(url) {
+        console.log('t1');
+        let uri = new URL(url);
+        console.log(url);
+        console.log(JSON.stringify(uri));
+        let id = uri.pathname.substr(uri.pathname.lastIndexOf('/') + 1);
+        let text = await this.request('https://javcl.me/api/source/' + id, {
+            body: 'r=https%3A%2F%2Fjavfull.net%2F&d=javcl.me',
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded'
+            }
+        });
+
+        let items = [];
+        let json = JSON.parse(text);
+        for (let data of json.data) {
+            let item = glib.DataItem.new();
+            item.title = data.label;
+            item.link = url;
+            item.data = {
+                url: data.file,
+                headers: {
+                    referer: url,
+                    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36',
+                    accept: '*/*',
+                    'accept-encoding': 'deflate, gzip'
+                }
+            };
+            items.push(item);
+        }
+        
+        return items;
+    }
+
+    reload(_, cb) {
+        this.fetch(this.url).then((results)=>{
+            this.setData(results);
+            cb.apply(null);
+        }).catch(function(err) {
+            if (err instanceof Error) {
+                console.log("Err " + err.message + " stack " + err.stack);
+                err = glib.Error.new(305, err.message);
+            }
+            cb.apply(err);
+        });
+        return true;
+    }
+}
+
 module.exports = function(item) {
     let link = item.link;
     if (link.match(/quickvideo\.net/)) {
         return QuickVideoCollection.new(item);
-    } 
+    }  else if (link.match(/javcl\.me/)) {
+        return JavclCollection.new(item);
+    }
     return null;
 };

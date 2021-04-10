@@ -13,7 +13,8 @@ class DetailsCollection extends Collection {
             let links = list.querySelectorAll('a');
             for (let link of links) {
                 let url = link.attr('data-link');
-                if (url.match(/quickvideo\.net/)) {
+                if (url.match(/quickvideo\.net/) || 
+                    url.match(/javcl\.me/)) {
                     let item = glib.DataItem.new();
                     item.title = link.text;
                     item.subtitle = title;
