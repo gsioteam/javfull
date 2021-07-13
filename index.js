@@ -12,16 +12,16 @@ class HomeCollection extends Collection {
     async _fetch(page) {
         let url = this.hrefUrl(page);
         let doc = await super.fetch(url);
-        let nodes = doc.querySelectorAll('.list-group > .item');
+        let nodes = doc.querySelectorAll('#renderTemp > div');
 
         let items = [];
         for (let node of nodes) {
-            let img = node.querySelector('.post-thumb img');
+            let img = node.querySelector('.video-thumb');
             let item = glib.DataItem.new();
             item.picture = img.attr('data-src');
-            item.title = img.attr('alt');
-            item.subtitle = node.querySelector('.post-des .post-summary').text;
-            item.link = node.querySelector('.post-thumb a').attr('href');
+            item.title = node.querySelector('.video-title').text;
+            item.subtitle = node.querySelector('.video-meta').text;
+            item.link = node.querySelector('.video-link').attr('href');
 
             items.push(item);
         }

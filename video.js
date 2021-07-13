@@ -4,7 +4,7 @@ const {setup} = require('./bundle');
 
 class QuickVideoCollection extends Collection {
 
-    async processAjax(text) {
+    async processAjax(text, href) {
         return new Promise((resolve, reject) => {
             let ctx = this.ctx = glib.ScriptContext.new('js');
             let data = glib.FileData.new(`${__dirname}/bundle.js`);
@@ -13,7 +13,8 @@ class QuickVideoCollection extends Collection {
             this.onAjax = glib.Callback.fromFunction((data) => {
                 try {
                     let d = data.toObject();
-                    let req = glib.Request.new(d.type, d.url);
+                    console.log(`ajax ${href.href(d.url)}`);
+                    let req = glib.Request.new(d.type, href.href(d.url));
                     let arr = [];
                     for (let key in d.data) {
                         arr.push(`${key}=${d.data[key]}`);
@@ -36,6 +37,7 @@ class QuickVideoCollection extends Collection {
                 resolve(options.toObject());
             });
             cb.apply({
+                location: href.url,
                 onAjax: this.onAjax,
                 onComplete: this.onComplete
             });
@@ -52,15 +54,17 @@ class QuickVideoCollection extends Collection {
         });
         let scripts = doc.querySelectorAll('script:not([src])');
         let selText;
+        let selLength = 0;
         for (let script of scripts) {
             let text = script.text;
-            if (text.match(/ﾟωﾟ/)) {
+            if (text.length > selLength) {
                 selText = text;
+                selLength = text.length;
             }
         }
         if (selText) {
             let items = [];
-            let data = await this.processAjax(selText);
+            let data = await this.processAjax(selText, new PageURL(url));
             for (let source of data.sources) {
                 let item = glib.DataItem.new();
                 item.title = source.label;

@@ -1,18 +1,21 @@
 
 const {Collection} = require('./collection');
 const crossCloudfare = require('./cross_cloudfare');
+const decodeLink = require('./decode_link');
 
 class DetailsCollection extends Collection {
     
     async fetch(url) {
         let doc = await super.fetch(url);
-        let lists = doc.querySelectorAll('.listserver .listep');
+        let id = doc.querySelector('.id').attr('data');
+        let lists = doc.querySelectorAll('.box-server > div');
         let items = [];
         for (let list of lists) {
-            let title = list.querySelector('.ep').text.trim().replace(':', '');
+            let title = list.querySelector('span').text.trim().replace(':', '');
             let links = list.querySelectorAll('a');
             for (let link of links) {
-                let url = link.attr('data-link');
+                let source = link.attr('data');
+                let url = decodeLink(id, source);
                 if (url.match(/quickvideo\.net/) || 
                     url.match(/javcl\.me/)) {
                     let item = glib.DataItem.new();

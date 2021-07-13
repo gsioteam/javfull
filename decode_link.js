@@ -1,121 +1,19 @@
-(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.beepBoop = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 const {atob, btoa} = require('abab');
 
-let onAjax, onComplete;
-class Engine {
-    createLoaderClass() {
-        return {};
+module.exports = function (id, source) {
+    let key = btoa(id + 'decode11234jav').split('').reverse().join('');
+    
+    let str = atob(source);
+    let code = '';
+    
+    let len = key.length;
+    for (let i = 0, t = str.length; i < t; ++i) {
+        let k = (i % len);
+        code += String.fromCharCode(str.charCodeAt(i) ^ key.charCodeAt(k));
     }
+    return atob(code);
 }
-
-globalThis.atob = atob;
-globalThis.btoa = btoa;
-globalThis.p2pml = {
-    hlsjs: {
-        Engine: Engine,
-        initVideoJsHlsJsPlugin() {
-            return true;
-        },
-        initJwPlayer() {
-            return true;
-        }
-    }
-};
-p2pml.hlsjs.Engine.isSupported = ()=>{
-    return true;
-}
-globalThis.videojs = function(id, options) {
-    if (onComplete) {
-        onComplete(options);
-    }
-};
-globalThis.jwplayer = function() {
-    return {
-        setMute: function() {},
-        setup: function(options) {
-            if (onComplete) {
-                let ops = {sources: []};
-                for (let data of options.sources) {
-                    ops.sources.push({
-                        label: data.label,
-                        src: data.file
-                    });
-                }
-                onComplete(ops);
-            }
-        },
-        setCurrentQuality: function() {
-        },
-        getQualityLevels: function() {},
-        on: function() {}
-    };
-};
-globalThis.jwplayer_hls_provider = {
-    attach: function() {}
-};
-globalThis.$ = globalThis.jQuery = {
-    ajax(data) {
-        if (onAjax) {
-            onAjax(data);
-        }
-    },
-    post(url, data, func) {
-        if (onAjax) {
-            onAjax({
-                url: url,
-                type: 'POST',
-                data: data,
-                success: function (res) {
-                    console.log('success ' + func);
-                    func(res);
-                }
-            });
-        }
-    },
-    getScript() {
-    }
-};
-function printFunction(label, args) {
-    console.log(label, ...args);
-}
-class Element {
-    constructor() {
-        this.style = {};
-        this.children = [];
-    }
-    appendChild() {
-    }
-    setAttribute() {
-    }
-}
-
-globalThis.document = {
-    createElement() {
-        return new Element();
-    },
-    getElementById() {
-        return new Element();
-    },
-    getElementsByTagName() {
-        return [new Element()];
-    },
-    createTextNode() {
-        return new Element();
-    }
-};
-globalThis.navigator = {
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36'
-};
-
-globalThis._setup = glib.Callback.fromFunction(function (options) {
-    let obj = options.toObject();
-    globalThis.window = {
-        location: obj.location
-    };
-    onAjax = obj.onAjax;
-    onComplete = obj.onComplete;
-});
 },{"abab":2}],2:[function(require,module,exports){
 "use strict";
 
@@ -286,4 +184,5 @@ function btoaLookup(index) {
 
 module.exports = btoa;
 
-},{}]},{},[1]);
+},{}]},{},[1])(1)
+});
