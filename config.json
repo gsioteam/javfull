@@ -1,27 +1,10 @@
 {
-    "name": "javfull.net",
-    "url": "https://javfull.net/",
-    "index": "index.js",
-    "collections": [
-        "details.js",
-        "video.js"
-    ],
-    "search": {
-        "src": "search.js",
-        "data": {
-            "url": "https://javfull.net/{1}?s={0}"
-        }
-    },
-    "categories": [
-        {
-            "title": "Home",
-            "id": "home",
-            "url": "https://javfull.net/page/{0}/"
-        }, 
-        {
-            "title": "Top",
-            "id": "top",
-            "url": "https://javfull.net/top-jav-movies-this-month/"
-        }
-    ]
+  "name": "Test",
+  "index": "index",
+  "appbar_elevation": 0,
+  "processor": "processor",
+  "extensions": [{
+    "icon": "search",
+    "index": "search"
+  }]
 }

@@ -1,74 +1,164 @@
 
-const {Collection} = require('./collection');
-const crossCloudfare = require('./cross_cloudfare');
+const baseURL = 'https://javfull.net/search/{0}/page/{1}/';
 
-class SearchCollection extends Collection {
-    
-    constructor(data) {
-        super(data);
-        this.page = 0;
-    }
+class SearchController extends Controller {
 
-    async fetch(url) {
-        console.log(url);
-        let doc = await super.fetch(url);
-        let nodes = doc.querySelectorAll('.list-group > .item');
-
-        console.log(nodes.length);
-        let items = [];
-        for (let node of nodes) {
-            let img = node.querySelector('.post-thumb img');
-            let item = glib.DataItem.new();
-            item.picture = img.attr('data-src');
-            item.title = img.attr('alt');
-            item.subtitle = node.querySelector('.post-des .post-summary').text;
-            item.link = node.querySelector('.post-thumb a').attr('href');
-
-            items.push(item);
-        }
-        return items;
-    }
-
-    makeURL(page) {
-        let url = this.url.replace('{0}', glib.Encoder.urlEncode(this.key));
-        return url.replace('{1}', `page/${page + 1}/`);
-    }
-
-    reload(data, cb) {
-        this.key = data.get("key") || this.key;
-        let page = 0;
-        if (!this.key) return false;
-        this.fetch(this.makeURL(page)).then((results)=>{
-            this.page = page;
-            this.setData(results);
-            cb.apply(null);
-        }).catch(function(err) {
-            if (err instanceof Error) {
-                console.log(err.stack);
-                err = glib.Error.new(305, err.message);
+    load() {
+        let str = localStorage['hints'];
+        let hints = [];
+        if (str) {
+            let json = JSON.parse(str);
+            if (json.push) {
+                hints = json;
             }
-            cb.apply(err);
-        });
-        return true;
+        }
+        this.data = {
+            list: [],
+            focus: false,
+            hints: hints,
+            text: '',
+            loading: false,
+        };
+        this.hasMore = true;
+    }
+
+    makeURL(word, page) {
+        return baseURL.replace('{0}', encodeURIComponent(word)).replace('{1}', page + 1);
+    }
+
+    onSearchClicked() {
+        this.findElement('input').submit();
     } 
 
-    loadMore(cb) {
-        let page = this.page + 1;
-        this.fetch(this.makeURL(page)).then((results)=>{
-            this.page = page;
-            this.appendData(results);
-            cb.apply(null);
-        }).catch(function(err) {
-            if (err instanceof Error) {
-                console.log(err.stack);
-                err = glib.Error.new(305, err.message);
+    onTextChange(text) {
+        this.data.text = text;
+    }
+
+    async onTextSubmit(text) {
+        let hints = this.data.hints;
+        if (text.length > 0) {
+            if (hints.indexOf(text) < 0) {
+                this.setState(()=>{
+                    hints.unshift(text);
+                    while (hints.length > 30) {
+                        hints.pop();
+                    }
+    
+                    localStorage['hints'] = JSON.stringify(hints);
+                });
             }
-            cb.apply(err);
+            
+            this.setState(()=>{
+                this.data.loading = true;
+            });
+            try {
+                let list = await this.request(this.makeURL(text, 0));
+                this.key = text;
+                this.page = 0;
+                this.hasMore = true;
+                this.setState(()=>{
+                    this.data.list = list;
+                    this.data.loading = false;
+                });
+            } catch(e) {
+                showToast(`${e}\n${e.stack}`);
+                this.setState(()=>{
+                    this.data.loading = false;
+                });
+            }
+        }
+    }
+
+    onTextFocus() {
+        this.setState(()=>{
+            this.data.focus = true;
         });
-        return true;
+    }
+
+    onTextBlur() {
+        this.setState(()=>{
+            this.data.focus = false;
+        });
+    }
+
+    onPressed(index) {
+        var data = this.data.list[index];
+        openVideo(data.link, data);
+    }
+
+    onHintPressed(index) {
+        let hint = this.data.hints[index];
+        if (hint) {
+            this.setState(()=>{
+                this.data.text = hint;
+                this.findElement('input').blur();
+                this.onTextSubmit(hint);
+            });
+        }
+    }
+
+    async onRefresh() {
+        let text = this.key;
+        if (!text) return;
+        try {
+            let list = await this.request(this.makeURL(text, 0));
+            this.page = 0;
+            this.hasMore = true;
+            this.setState(()=>{
+                this.data.list = list;
+                this.data.loading = false;
+            });
+        } catch(e) {
+            showToast(`${e}\n${e.stack}`);
+            this.setState(()=>{
+                this.data.loading = false;
+            });
+        }
+    }
+
+    async onLoadMore() {
+        if (!this.hasMore) return;
+        let page = this.page + 1;
+        try {
+            let list = await this.request(this.makeURL(text, page));
+            if (list.length == 0) {
+                this.hasMore = false;
+            }
+            this.page = page;
+            this.setState(()=>{
+                for (let item in list) {
+                    this.data.list.push(item);
+                }
+                this.data.loading = false;
+            });
+        } catch(e) {
+            showToast(`${e}\n${e.stack}`);
+            this.setState(()=>{
+                this.data.loading = false;
+            });
+        }
+    }
+
+    async request(url) {
+        let res = await fetch(url);
+        let html = await res.text();
+        let doc = HTMLParser.parse(html);
+        let nodes = doc.querySelectorAll('.left-content > .row .video-item');
+
+        let items = [];
+        for (let node of nodes) {
+            let img = node.querySelector('.video-thumb');
+
+            items.push({
+                title: node.querySelector('.video-title').text,
+                subtitle: node.querySelector('.video-meta').text,
+                link: node.querySelector('.video-link').getAttribute('href'),
+                picture: img.getAttribute('data-src')
+            });
+        }
+        
+        return items;
     }
 }
 
-module.exports = function(data) {
-    return SearchCollection.new(data ? data.toObject() : {});
-};
+module.exports = SearchController;
