@@ -1,5 +1,6 @@
 {
   "name": "javful",
+  "icon": "icon.webp",
   "index": "index",
   "appbar_elevation": 0,
   "processor": "processor",
