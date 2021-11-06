@@ -119,6 +119,7 @@ class SearchController extends Controller {
     async onLoadMore() {
         if (!this.hasMore) return;
         let page = this.page + 1;
+        let text = this.key;
         try {
             let list = await this.request(this.makeURL(text, page));
             if (list.length == 0) {
