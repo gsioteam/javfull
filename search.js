@@ -52,8 +52,8 @@ class SearchController extends Controller {
                 this.data.loading = true;
             });
             try {
-                let list = await this.request(this.makeURL(text, 0));
                 this.key = text;
+                let list = await this.request(this.makeURL(text, 0));
                 this.page = 0;
                 this.hasMore = true;
                 this.setState(()=>{
@@ -122,13 +122,14 @@ class SearchController extends Controller {
         let text = this.key;
         try {
             let list = await this.request(this.makeURL(text, page));
-            if (list.length == 0) {
-                this.hasMore = false;
-            }
             this.page = page;
             this.setState(()=>{
-                for (let item in list) {
-                    this.data.list.push(item);
+                if (list.length == 0) {
+                    this.hasMore = false;
+                } else {
+                    for (let item of list) {
+                        this.data.list.push(item);
+                    }
                 }
                 this.data.loading = false;
             });
