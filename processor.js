@@ -1,10 +1,6 @@
 
 const decodeLink = require('./decode_link');
 
-function base64decode(str) {
-    return Buffer.from(str, 'base64').toString();
-}
-
 class VideoProcesser extends Processor {
     async load(data) {
         this.value = {
@@ -39,147 +35,66 @@ class VideoProcesser extends Processor {
                 }
             }
         }
-        console.log(`items ${items.length}`);
 
         this.value = {
             items: items,
         };
     }
 
-    async processAjax(text, url) {
+
+    loadVideoUrl(src) {
         return new Promise((resolve, reject) => {
-            console.log(`test 1`);
-            let ctx = this.ctx = new ScriptContext();
-            console.log(`test 2`);
-            let data = this.loadString('bundle.js');
-            console.log(`test 3`);
-            ctx.eval(data);
-            console.log(`test 4`);
-            ctx.postMessage({
-                event: 'setup',
-                data: {
-                    location: url,
-                }
+            let webView = new HiddenWebView({
+                resourceReplacements: [{
+                    test:'jwplayer\.js',
+                    resource: this.loadString('my_jwplayer.js'),
+                    mimeType: 'text/javascript',
+                }]
             });
-            console.log(`test 4`);
-            ctx.onmessage = async function(ev) {
+            let cleanUp = () => {
+                this.webView = null;
+            }; 
+            webView.load(src);
+            webView.onmessage = (ev) => {
                 let event = ev.event;
                 let data = ev.data;
-
                 switch (event) {
-                    case 'ajax': {
+                    case 'complete': {
+                        let items = [];
                         try {
-                            let reqUrl = new URL(data.url, url).toString();
-                            console.log(`on ajax ${reqUrl} ${data.type}`);
-                            let arr = [];
-                            for (let key in data.data) {
-                                arr.push(`${key}=${data.data[key]}`);
+                            let sources;
+                            if (data.sources.length) {
+                                sources = data.sources;
+                            } else {
+                                sources = [data.sources];
                             }
-                            console.log(`body ${arr.join('&')}`);
-                            let res = await fetch(reqUrl, {
-                                headers: {
-                                    'content-type': 'application/x-www-form-urlencoded',
-                                },
-                                body: arr.join('&'),
-                                method: data.type,
-                            });
-                            let text = await res.text();
-                            console.log('ajax_complete');
-                            ctx.postMessage({
-                                event: 'ajax_complete',
-                                data: {
-                                    id: data.id,
-                                    body: text,
-                                }
-                            });
+                            for (let source of sources) {
+                                items.push({
+                                    title: source.type,
+                                    url: source.file
+                                });
+                            }
                         } catch (e) {
                             reject(e);
+                            cleanUp();
+                            return;
                         }
-                        break;
-                    }
-                    case 'complete': {
-                        console.log(`all complete ${JSON.stringify(data)}`);
-                        resolve(data);
+                        resolve(items);
+                        cleanUp();
                         break;
                     }
                 }
             };
-            // this.onAjax = glib.Callback.fromFunction((data) => {
-            //     try {
-            //         let d = data.toObject();
-            //         console.log(`ajax ${href.href(d.url)}`);
-            //         let req = glib.Request.new(d.type, href.href(d.url));
-            //         let arr = [];
-            //         for (let key in d.data) {
-            //             arr.push(`${key}=${d.data[key]}`);
-            //         }
-            //         req.setBody(glib.Data.fromString(arr.join('&')));
-            //         req.setHeader('content-type', 'application/x-www-form-urlencoded');
-            //         this.callback = glib.Callback.fromFunction(() => {
-            //             console.log('complete!');
-            //             let body = req.getResponseBody();
-            //             d.success(body.text(), 'OK');
-            //         });
-            //         req.setOnComplete(this.callback);
-            //         req.start();
-            //         console.log('start ' + JSON.stringify(d));
-            //     } catch (e) {
-            //         reject(e);
-            //     }
-            // });
-            // this.onComplete = glib.Callback.fromFunction((options) => {
-            //     resolve(options.toObject());
-            // });
-            console.log(`test 10 ${text}`);
-            ctx.eval(text);
-            console.log(`test 11`);
+            this.webView = webView;
         });
     }
 
     async loadQuickVideo(url) {
-        console.log("req " + url);
-        let request = new Request(
-            url,
-            {
-                headers: {
-                    referer: 'https://javfull.net/'
-                }
-            }
-        );
-        let response = await fetch(request);
-        let doc = HTMLParser.parse(await response.text());
-        console.log("complete " + url);
+        let items = await this.loadVideoUrl(url);
 
-        let scripts = doc.querySelectorAll('script:not([src])');
-        let selText;
-        let selLength = 0;
-        for (let script of scripts) {
-            let text = script.text;
-            if (text.match(/play\/ajax/)) {
-                selText = text;
-                selLength = text.length;
-                break;
-            }
-        }
-        if (selText) {
-            let items = [];
-            let data = await this.processAjax(selText, url);
-            for (let source of data.sources) {
-                items.push({
-                    title: source.label,
-                    url: source.src,
-                    headers: {
-                        referer: url,
-                        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36',
-                        accept: '*/*',
-                        'accept-encoding': 'deflate, gzip'
-                    }
-                });
-            }
+        if (items != null && items.length > 0)
             localStorage[`video:${url}`] = JSON.stringify(items);
-            return items;
-        }
-        return [];
+        return items;
     }
 
     async loadJavcl(url) {
